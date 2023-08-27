@@ -80,6 +80,37 @@ typedef struct {
 } sunxi_gpio_info;
 
 
+#define GPIO_PWM 		   GPIO_PWM_OP
+
+
+//sunxi_pwm
+#define SUNXI_PWM_BASE (0x01c21400)
+#define SUNXI_PWM_CTRL_REG  (SUNXI_PWM_BASE)
+#define SUNXI_PWM_CH0_PERIOD  (SUNXI_PWM_BASE + 0x4)
+#define SUNXI_PWM_CH1_PERIOD  (SUNXI_PWM_BASE + 0x8)
+
+#define SUNXI_PWM_CH0_EN   (1 << 4)
+#define SUNXI_PWM_CH0_ACT_STA  (1 << 5)
+#define SUNXI_PWM_SCLK_CH0_GATING (1 << 6)
+#define SUNXI_PWM_CH0_MS_MODE  (1 << 7) //pulse mode
+#define SUNXI_PWM_CH0_PUL_START  (1 << 8)
+
+#define PWM_CLK_DIV_120  0
+#define PWM_CLK_DIV_180  1
+#define PWM_CLK_DIV_240  2
+#define PWM_CLK_DIV_360  3
+#define PWM_CLK_DIV_480  4
+#define PWM_CLK_DIV_12K  8
+#define PWM_CLK_DIV_24K  9
+#define PWM_CLK_DIV_36K  10
+#define PWM_CLK_DIV_48K  11
+#define PWM_CLK_DIV_72K  12
+
+#define SUNXI_PUD_OFF   0
+#define SUNXI_PUD_UP    1
+#define SUNXI_PUD_DOWN  2
+
+
 /*********** Rockchip RK3588 *************/
 
 //gpio0~gpio4 register base addr
