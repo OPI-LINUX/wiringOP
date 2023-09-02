@@ -1995,8 +1995,43 @@ void print_pwm_reg() {
     }
 }
 
+void sunxi_pwm_set_enable_v2(int en) {
+    int val = 0;
+	// CLK
+    val = readR(SUNXI_PWM_CLK_REG);
+    if (en) {
+        val |= (SUNXI_PWM_SCLK_CH0_GATING);
+    }
+    else {
+        val &= ~(SUNXI_PWM_SCLK_CH0_GATING);
+    }
+    if (wiringPiDebug)
+        printf(">>function%s,no:%d,enable? :0x%x\n", __func__, __LINE__, val);
+    writeR(val, SUNXI_PWM_CLK_REG);
+    delay(1);
+	// EN
+    val = readR(SUNXI_PWM_EN_REG);
+    if (en) {
+        val |= (SUNXI_PWM_CH0_EN);
+    }
+    else {
+        val &= ~(SUNXI_PWM_CH0_EN);
+    }
+    if (wiringPiDebug)
+        printf(">>function%s,no:%d,enable? :0x%x\n", __func__, __LINE__, val);
+    writeR(val, SUNXI_PWM_EN_REG);
+    delay(1);
+	// debug	
+    print_pwm_reg();
+}
+
+
 void sunxi_pwm_set_enable(int en) {
     int val = 0;
+	if(SUNXI_PWM_TYPE == SUNXI_V2_PWM_TYPE) {
+		sunxi_pwm_set_enable_v2(en);
+		return;
+	}
     val = readR(SUNXI_PWM_CTRL_REG);
     if (en) {
         val |= (SUNXI_PWM_CH0_EN | SUNXI_PWM_SCLK_CH0_GATING);
@@ -2031,8 +2066,32 @@ void sunxi_pwm_set_mode(int mode) {
     print_pwm_reg();   
 }
 
+void sunxi_pwm_set_clk_v2(int clk) {
+    int val = 0;
+    if (wiringPiDebug)
+        printf(">>function%s,no:%d\n", __func__, __LINE__);
+    sunxi_pwm_set_enable(0);
+    val = readR(SUNXI_PWM_CTRL_REG);
+    if (wiringPiDebug)
+        printf("read reg val: 0x%x\n", val);
+    //clear clk to 0
+    val &= 0x0ff0;
+    val |= (clk & 0xff); //todo check wether clk is invalid or not
+    writeR(val, SUNXI_PWM_CTRL_REG);
+    sunxi_pwm_set_enable(1);
+    if (wiringPiDebug)
+        printf(">>function%s,no:%d,clk? :0x%x\n", __func__, __LINE__, val);
+    delay(1);
+    print_pwm_reg();
+}
+
+
 void sunxi_pwm_set_clk(int clk) {
     int val = 0;
+	if(SUNXI_PWM_TYPE == SUNXI_V2_PWM_TYPE) {
+		sunxi_pwm_set_clk_v2(clk);
+		return;
+	}	
     if (wiringPiDebug)
         printf(">>function%s,no:%d\n", __func__, __LINE__);
     // sunxi_pwm_set_enable(0);
@@ -3177,6 +3236,7 @@ void set_soc_info(void)
 			sunxi_gpio_info_t.r_gpio_base_addr = H6_R_GPIO_BASE_ADDR;
 			sunxi_gpio_info_t.gpio_base_offset = 0x0;
 			sunxi_gpio_info_t.r_gpio_base_offset = 0x0;
+			sunxi_gpio_info_t.pwm_base_addr = H6_PWM_BASE;			
 			break;
 		case PI_MODEL_ZERO:
 		case PI_MODEL_ZERO_PLUS_2:
@@ -3189,10 +3249,52 @@ void set_soc_info(void)
 			sunxi_gpio_info_t.r_gpio_base_addr = H3_R_GPIO_BASE_ADDR;
 			sunxi_gpio_info_t.gpio_base_offset = 0x800;
 			sunxi_gpio_info_t.r_gpio_base_offset = 0xc00;
+			sunxi_gpio_info_t.pwm_base_addr = H3_PWM_BASE;			
 			break;
 		default:
 			break;
 	}
+
+	switch (OrangePiModel)
+	{
+		case PI_MODEL_3:
+		case PI_MODEL_LTIE_2:
+		case PI_MODEL_ZERO:
+		case PI_MODEL_ZERO_PLUS_2:
+		case PI_MODEL_WIN:
+		case PI_MODEL_PRIME:
+		case PI_MODEL_PC_2:
+		case PI_MODEL_ZERO_PLUS:
+		case PI_MODEL_H3:				
+			sunxi_gpio_info_t.pwm_ctrl = SUNXI_V1_PWM_CTRL_REG;
+			sunxi_gpio_info_t.pwm_period = SUNXI_V1_PWM_CH0_PERIOD;
+			sunxi_gpio_info_t.pwm_clk = SUNXI_V1_PWM_CTRL_REG;			
+			sunxi_gpio_info_t.pwm_en = SUNXI_V1_PWM_CTRL_REG;			
+			sunxi_gpio_info_t.pwm_type = SUNXI_V1_PWM_TYPE;
+			sunxi_gpio_info_t.pwm_bit_en = SUNXI_V1_PWM_CH0_EN; 	// SUNXI_PWM_CH0_EN
+			sunxi_gpio_info_t.pwm_bit_act = SUNXI_V1_PWM_CH0_ACT_STA;	// SUNXI_PWM_CH0_ACT_STA
+			sunxi_gpio_info_t.pwm_bit_sclk = SUNXI_V1_PWM_SCLK_CH0_GATING;	// SUNXI_PWM_SCLK_CH0_GATING
+			sunxi_gpio_info_t.pwm_bit_mode = SUNXI_V1_PWM_CH0_MS_MODE;	// SUNXI_PWM_CH0_MS_MODE	
+			sunxi_gpio_info_t.pwm_bit_pulse = SUNXI_V1_PWM_CH0_PUL_START;	// SUNXI_PWM_CH0_PUL_START						
+			break;
+		case PI_MODEL_ZERO_2:
+		case PI_MODEL_ZERO_2_W:			
+			sunxi_gpio_info_t.pwm_ctrl = SUNXI_V2_PWM_CTRL1_REG;
+			sunxi_gpio_info_t.pwm_period = SUNXI_V2_PWM_CH1_PERIOD;
+			sunxi_gpio_info_t.pwm_clk = SUNXI_V2_PWM_CLK1_REG;
+			sunxi_gpio_info_t.pwm_en = SUNXI_V2_PWM_EN_REG;			
+			sunxi_gpio_info_t.pwm_type = SUNXI_V2_PWM_TYPE;	// H616	
+			sunxi_gpio_info_t.pwm_bit_en = SUNXI_V2_PWM_CH1_EN; 	// SUNXI_PWM_CH0_EN
+			sunxi_gpio_info_t.pwm_bit_act = SUNXI_V2_PWM_CH0_ACT_STA;	// SUNXI_PWM_CH0_ACT_STA
+			sunxi_gpio_info_t.pwm_bit_sclk = SUNXI_V2_PWM_SCLK_CH0_GATING;	// SUNXI_PWM_SCLK_CH0_GATING
+			sunxi_gpio_info_t.pwm_bit_mode = SUNXI_V2_PWM_CH0_MS_MODE;	// SUNXI_PWM_CH0_MS_MODE	
+			sunxi_gpio_info_t.pwm_bit_pulse = SUNXI_V2_PWM_CH0_PUL_START;	// SUNXI_PWM_CH0_PUL_START				
+			break;
+		default:
+			break;
+	}
+
+
 }
 
 /*
@@ -3365,6 +3467,13 @@ int wiringPiSetup (void)
 		case PI_MODEL_PRIME: case PI_MODEL_PC_2: case PI_MODEL_ZERO_PLUS:
 		case PI_MODEL_H3: case PI_MODEL_ZERO_2_W:
 	
+if (OrangePiModel == PI_MODEL_ZERO_2) {
+sunxi_gpio_info_t.pwm = (uint32_t *)mmap(0, BLOCK_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, sunxi_gpio_info_t.pwm_base_addr);
+			if ((int32_t)(unsigned long)sunxi_gpio_info_t.pwm == -1)
+				return wiringPiFailure(WPI_ALMOST, "wiringPiSetup: mmap (PWM) failed: %s\n", strerror(errno));
+
+
+}
 			sunxi_gpio_info_t.gpio = (uint32_t *)mmap(0, BLOCK_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, sunxi_gpio_info_t.gpio_base_addr);
 			if ((int32_t)(unsigned long)sunxi_gpio_info_t.gpio == -1)
 				return wiringPiFailure(WPI_ALMOST, "wiringPiSetup: mmap (GPIO) failed: %s\n", strerror(errno));
@@ -3825,6 +3934,12 @@ unsigned int readR(unsigned int addr)
 			val = 0;
 			mmap_base = (addr & 0xfffff000);
 			mmap_seek = ((addr - mmap_base) >> 2);
+			
+			if(mmap_base == SUNXI_PWM_BASE) {
+				mmap_seek = (addr - mmap_base);			
+				val = *(sunxi_gpio_info_t.pwm + mmap_seek);
+				return val;
+			}
 
 			if (addr >= sunxi_gpio_info_t.r_gpio_base_addr)
 				val = *(sunxi_gpio_info_t.r_gpio + mmap_seek);
@@ -3952,6 +4067,12 @@ void writeR(unsigned int val, unsigned int addr)
 
 			mmap_base = (addr & 0xfffff000);
 			mmap_seek = ((addr - mmap_base) >> 2);
+
+			if(mmap_base == SUNXI_PWM_BASE) {
+				mmap_seek = (addr - mmap_base);
+				*(sunxi_gpio_info_t.pwm + mmap_seek) = val;
+				return;
+			}
 				        
 			if (addr >= sunxi_gpio_info_t.r_gpio_base_addr)
 				*(sunxi_gpio_info_t.r_gpio + mmap_seek) = val;
@@ -4547,7 +4668,27 @@ int OrangePi_set_gpio_mode(int pin, int mode)
 				}
 				else if(PWM_OUTPUT == mode)
 				{
-					OrangePi_set_gpio_mode(pin, PWM_OUTPUT);
+					//OrangePi_set_gpio_mode(pin, PWM_OUTPUT);
+            // set pin PWMx to pwm mode
+            regval &= ~(7 << offset);
+            regval |= (0x3 << offset);
+            if (wiringPiDebug)
+                printf(">>>>>line:%d PWM mode ready to set val: 0x%x\n", __LINE__, regval);
+            writeR(regval, phyaddr);
+            delayMicroseconds(200);
+            regval = readR(phyaddr);
+            if (wiringPiDebug)
+                printf("<<<<<PWM mode set over reg val: 0x%x\n", regval);
+            //clear all reg
+            writeR(0, SUNXI_PWM_CTRL_REG);
+            writeR(0, SUNXI_PWM_CH0_PERIOD);
+
+            //set default M:S to 1/2
+            sunxi_pwm_set_period(1024);
+            sunxi_pwm_set_act(512);
+            pwmSetMode(PWM_MODE_MS);
+            sunxi_pwm_set_clk(PWM_CLK_DIV_120); //default clk:24M/120
+            delayMicroseconds(200);
 				}
 				else
 				{

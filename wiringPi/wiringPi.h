@@ -77,6 +77,18 @@ typedef struct {
 	unsigned int * r_gpio;
 	unsigned int gpio_base_offset;
 	unsigned int r_gpio_base_offset;
+	unsigned int pwm_base_addr;
+	unsigned int * pwm;	
+	unsigned int pwm_ctrl;
+	unsigned int pwm_period;
+	unsigned int pwm_clk;		// H616
+	unsigned int pwm_en;		// H616	
+	unsigned int pwm_type;		// type:V1 H3/H6, type:V2 H616
+	unsigned int pwm_bit_en; 	// SUNXI_PWM_CH0_EN
+	unsigned int pwm_bit_act;	// SUNXI_PWM_CH0_ACT_STA
+	unsigned int pwm_bit_sclk;	// SUNXI_PWM_SCLK_CH0_GATING
+	unsigned int pwm_bit_mode;	// SUNXI_PWM_CH0_MS_MODE	
+	unsigned int pwm_bit_pulse;	// SUNXI_PWM_CH0_PUL_START			
 } sunxi_gpio_info;
 
 
@@ -84,6 +96,7 @@ typedef struct {
 
 
 //sunxi_pwm
+#ifdef OPI
 #define SUNXI_PWM_BASE (0x01c21400)
 #define SUNXI_PWM_CTRL_REG  (SUNXI_PWM_BASE)
 #define SUNXI_PWM_CH0_PERIOD  (SUNXI_PWM_BASE + 0x4)
@@ -94,6 +107,55 @@ typedef struct {
 #define SUNXI_PWM_SCLK_CH0_GATING (1 << 6)
 #define SUNXI_PWM_CH0_MS_MODE  (1 << 7) //pulse mode
 #define SUNXI_PWM_CH0_PUL_START  (1 << 8)
+
+#else
+#define SUNXI_PWM_BASE 			(sunxi_gpio_info_t.pwm_base_addr)
+#define SUNXI_PWM_CTRL_REG		(sunxi_gpio_info_t.pwm_ctrl)
+#define SUNXI_PWM_CH0_PERIOD	(sunxi_gpio_info_t.pwm_period)
+#define SUNXI_PWM_CLK_REG		(sunxi_gpio_info_t.pwm_clk)	// H616
+#define SUNXI_PWM_EN_REG		(sunxi_gpio_info_t.pwm_en)	// H616
+#define SUNXI_PWM_TYPE			(sunxi_gpio_info_t.pwm_type)
+#define SUNXI_PWM_CH0_EN   		(sunxi_gpio_info_t.pwm_bit_en)
+#define SUNXI_PWM_CH0_ACT_STA  	(sunxi_gpio_info_t.pwm_bit_act)
+#define SUNXI_PWM_SCLK_CH0_GATING (sunxi_gpio_info_t.pwm_bit_sclk)
+#define SUNXI_PWM_CH0_MS_MODE	(sunxi_gpio_info_t.pwm_bit_mode) //pulse mode
+#define SUNXI_PWM_CH0_PUL_START	(sunxi_gpio_info_t.pwm_bit_pulse)
+#endif
+
+#define H3_PWM_BASE		(0x01c21400)
+#define H6_PWM_BASE		(0x0300A000)
+#define H616_PWM_BASE	(0x0300A000)
+
+#define SUNXI_V1_PWM_TYPE		(1)
+#define SUNXI_V2_PWM_TYPE		(2)
+
+#define SUNXI_V1_PWM_EN_REG		(SUNXI_PWM_BASE + 0x0)
+#define SUNXI_V1_PWM_CLK_REG	(SUNXI_PWM_BASE + 0x0)
+#define SUNXI_V1_PWM_CTRL_REG	(SUNXI_PWM_BASE + 0x0)
+#define SUNXI_V1_PWM_CH0_PERIOD	(SUNXI_PWM_BASE + 0x4)
+
+#define SUNXI_V1_PWM_CH0_EN   (1 << 4)
+#define SUNXI_V1_PWM_CH0_ACT_STA  (1 << 5)
+#define SUNXI_V1_PWM_SCLK_CH0_GATING (1 << 6)
+#define SUNXI_V1_PWM_CH0_MS_MODE  (1 << 7) //pulse mode
+#define SUNXI_V1_PWM_CH0_PUL_START  (1 << 8)
+
+#define SUNXI_V2_PWM_EN_REG     (SUNXI_PWM_BASE + 0x40)
+#define SUNXI_V2_PWM_CLK1_REG   (SUNXI_PWM_BASE + 0x20)
+#define SUNXI_V2_PWM_CLK2_REG   (SUNXI_PWM_BASE + 0x24)
+#define SUNXI_V2_PWM_CTRL1_REG  (SUNXI_PWM_BASE + 0x80)
+#define SUNXI_V2_PWM_CTRL2_REG  (SUNXI_PWM_BASE + 0xA0)
+#define SUNXI_V2_PWM_CH1_PERIOD (SUNXI_PWM_BASE + 0x84)
+#define SUNXI_V2_PWM_CH2_PERIOD (SUNXI_PWM_BASE + 0xA4)
+
+
+#define SUNXI_V2_PWM_CH1_EN   (1 << 1) // 0x40 H616_PWM_EN_REG
+#define SUNXI_V2_PWM_CH2_EN   (1 << 2) // 0x40 H616_PWM_EN_REG
+#define SUNXI_V2_PWM_CH0_ACT_STA  (1 << 8) // 0x80 CTRL1 / CTRL2 0xA0
+#define SUNXI_V2_PWM_SCLK_CH0_GATING (1 << 4) // 0x20 CLK1 / CLK2 0x24
+#define SUNXI_V2_PWM_CH0_MS_MODE  (1 << 9) //pulse mode // 0x80 CTRL1 / CTRL2 0xA0
+#define SUNXI_V2_PWM_CH0_PUL_START  (1 << 10) // 0x80 CTRL1 / CTRL2 0xA0
+
 
 #define PWM_CLK_DIV_120  0
 #define PWM_CLK_DIV_180  1
