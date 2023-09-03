@@ -502,6 +502,7 @@ static pthread_mutex_t pinMutex ;
 // Debugging & Return codes
 
 int wiringPiDebug       = FALSE ;
+//int wiringPiDebug       = TRUE ;
 int wiringPiReturnCodes = FALSE ;
 
 // Use /dev/gpiomem ?
@@ -1990,8 +1991,13 @@ void print_pwm_reg() {
     uint32_t val = readR(SUNXI_PWM_CTRL_REG);
     uint32_t val2 = readR(SUNXI_PWM_CH0_PERIOD);
     if (wiringPiDebug) {
+#ifdef OPI
         printf("SUNXI_PWM_CTRL_REG: %s\n", int2bin(val));
         printf("SUNXI_PWM_CH0_PERIOD: %s\n", int2bin(val2));
+#else
+        printf("SUNXI_PWM_CTRL_REG: [%x]\n", val);
+        printf("SUNXI_PWM_CH0_PERIOD: [%x]\n", val2);
+#endif
     }
 }
 
@@ -2455,10 +2461,15 @@ void pinMode (int pin, int mode)
 		}
 		else if (mode == PWM_OUTPUT)
 		{
-			if(pin != 5) 
+			if (wiringPiDebug)
+				printf("OPI: try wiringPi pin %d for PWM pin\n", pin);
+			if(pin != 5 && pin != 227) 
 			{
 				printf("the pin you choose doesn't support hardware PWM\n");
-				printf("you can select wiringPi pin %d for PWM pin\n", 42);
+				if (OrangePiModel==PI_MODEL_ZERO_2)
+				   printf("OPI:you can select wiringPi pin %d for PWM pin\n", 277);
+				else
+				   printf("you can select wiringPi pin %d for PWM pin\n", 42);
 				printf("or you can use it in softPwm mode\n");
 				return;
 			}
@@ -2702,7 +2713,9 @@ void pwmWrite(int pin, int value) {
             printf("[%s:L%d] the pin:%d is invaild,please check it over!\n", __func__, __LINE__, pin);
             return;
         }
-       if (pin != 5) {
+       if (wiringPiDebug)
+           printf("OPI: check pwm pin(%d)\n",pin);
+       if (pin != 5 && pin != 227) {
             printf("please use soft pwmmode or choose PWM pin\n");
             return;
         }
@@ -3467,13 +3480,12 @@ int wiringPiSetup (void)
 		case PI_MODEL_PRIME: case PI_MODEL_PC_2: case PI_MODEL_ZERO_PLUS:
 		case PI_MODEL_H3: case PI_MODEL_ZERO_2_W:
 	
-if (OrangePiModel == PI_MODEL_ZERO_2) {
-sunxi_gpio_info_t.pwm = (uint32_t *)mmap(0, BLOCK_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, sunxi_gpio_info_t.pwm_base_addr);
+			sunxi_gpio_info_t.pwm = (uint32_t *)mmap(0, BLOCK_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, sunxi_gpio_info_t.pwm_base_addr);
+
 			if ((int32_t)(unsigned long)sunxi_gpio_info_t.pwm == -1)
 				return wiringPiFailure(WPI_ALMOST, "wiringPiSetup: mmap (PWM) failed: %s\n", strerror(errno));
 
 
-}
 			sunxi_gpio_info_t.gpio = (uint32_t *)mmap(0, BLOCK_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, sunxi_gpio_info_t.gpio_base_addr);
 			if ((int32_t)(unsigned long)sunxi_gpio_info_t.gpio == -1)
 				return wiringPiFailure(WPI_ALMOST, "wiringPiSetup: mmap (GPIO) failed: %s\n", strerror(errno));
@@ -3936,8 +3948,10 @@ unsigned int readR(unsigned int addr)
 			mmap_seek = ((addr - mmap_base) >> 2);
 			
 			if(mmap_base == SUNXI_PWM_BASE) {
-				mmap_seek = (addr - mmap_base);			
 				val = *(sunxi_gpio_info_t.pwm + mmap_seek);
+				if (wiringPiDebug){
+					printf("OPI: PWM: readR addr[%x]=[%x]\n",addr,val);
+				}
 				return val;
 			}
 
@@ -4069,8 +4083,10 @@ void writeR(unsigned int val, unsigned int addr)
 			mmap_seek = ((addr - mmap_base) >> 2);
 
 			if(mmap_base == SUNXI_PWM_BASE) {
-				mmap_seek = (addr - mmap_base);
 				*(sunxi_gpio_info_t.pwm + mmap_seek) = val;
+				if (wiringPiDebug){
+					printf("OPI: PWM: writeR addr[%x]=[%x]\n",addr,val);
+				}
 				return;
 			}
 				        
@@ -4668,27 +4684,32 @@ int OrangePi_set_gpio_mode(int pin, int mode)
 				}
 				else if(PWM_OUTPUT == mode)
 				{
-					//OrangePi_set_gpio_mode(pin, PWM_OUTPUT);
-            // set pin PWMx to pwm mode
-            regval &= ~(7 << offset);
-            regval |= (0x3 << offset);
-            if (wiringPiDebug)
-                printf(">>>>>line:%d PWM mode ready to set val: 0x%x\n", __LINE__, regval);
-            writeR(regval, phyaddr);
-            delayMicroseconds(200);
-            regval = readR(phyaddr);
-            if (wiringPiDebug)
-                printf("<<<<<PWM mode set over reg val: 0x%x\n", regval);
-            //clear all reg
-            writeR(0, SUNXI_PWM_CTRL_REG);
-            writeR(0, SUNXI_PWM_CH0_PERIOD);
+            				// set pin PWMx to pwm mode
+            				regval &= ~(7 << offset);
+					if (OrangePiModel==PI_MODEL_ZERO_2)
+						regval |= (0x4 << offset); // ALT4 PWM
+					else
+            					regval |= (0x3 << offset); // ALT3 PWM
+					if (wiringPiDebug)
+					   printf(">>>>>line:%d PWM mode ready to set val: 0x%x\n", __LINE__, regval);
+					writeR(regval, phyaddr);
+					delayMicroseconds(200);
+					regval = readR(phyaddr);
+					if (wiringPiDebug)
+					   printf("<<<<<PWM mode set over reg val: 0x%x\n", regval);
+					//clear all reg
+					writeR(0, SUNXI_PWM_CTRL_REG);
+					writeR(0, SUNXI_PWM_CH0_PERIOD);
 
-            //set default M:S to 1/2
-            sunxi_pwm_set_period(1024);
-            sunxi_pwm_set_act(512);
-            pwmSetMode(PWM_MODE_MS);
-            sunxi_pwm_set_clk(PWM_CLK_DIV_120); //default clk:24M/120
-            delayMicroseconds(200);
+					//set default M:S to 1/2
+					sunxi_pwm_set_period(1024);
+					sunxi_pwm_set_act(512);
+					pwmSetMode(PWM_MODE_MS);
+					if (OrangePiModel==PI_MODEL_ZERO_2)
+						sunxi_pwm_set_clk(120); //default clk:24M/120
+					else
+						sunxi_pwm_set_clk(PWM_CLK_DIV_120); //default clk:24M/120
+					delayMicroseconds(200);
 				}
 				else
 				{
