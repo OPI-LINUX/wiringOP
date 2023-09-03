@@ -28,7 +28,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#define PWM_PIN 29
+// wPI
+#define PWM_PIN 4
 
 int main (void)
 {
