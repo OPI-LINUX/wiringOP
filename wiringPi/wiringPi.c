@@ -4706,7 +4706,7 @@ int OrangePi_set_gpio_mode(int pin, int mode)
 					sunxi_pwm_set_act(512);
 					pwmSetMode(PWM_MODE_MS);
 					if (OrangePiModel==PI_MODEL_ZERO_2)
-						sunxi_pwm_set_clk(120); //default clk:24M/120
+						sunxi_pwm_set_clk(0); //default clk:24M/120
 					else
 						sunxi_pwm_set_clk(PWM_CLK_DIV_120); //default clk:24M/120
 					delayMicroseconds(200);
